@@ -8,7 +8,49 @@ class StockScreen extends StatefulWidget {
 class _StockScreenState extends State<StockScreen> {
   final TextEditingController codeController = TextEditingController();
   final TextEditingController stockController = TextEditingController();
-  List<Map<String, dynamic>> stockMovements = [];
+  final TextEditingController searchController = TextEditingController();
+
+  List<Map<String, dynamic>> stockMovements = [
+    {
+      'code': '001',
+      'depot': 'Padrão',
+      'product': 'Produto A',
+      'quantity': 10,
+      'type': 'Entrada',
+      'observation': 'Estoque inicial'
+    },
+    {
+      'code': '002',
+      'depot': 'Depósito 1',
+      'product': 'Produto B',
+      'quantity': 5,
+      'type': 'Entrada',
+      'observation': 'Novo lote'
+    },
+  ];
+
+  List<Map<String, dynamic>> filteredStockMovements = [];
+
+  @override
+  void initState() {
+    super.initState();
+    filteredStockMovements = stockMovements;
+  }
+
+  void _filterStockMovements(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        filteredStockMovements = stockMovements;
+      } else {
+        filteredStockMovements = stockMovements.where((movement) {
+          final product = movement['product'].toLowerCase();
+          final code = movement['code'].toLowerCase();
+          final lowerQuery = query.toLowerCase();
+          return product.contains(lowerQuery) || code.contains(lowerQuery);
+        }).toList();
+      }
+    });
+  }
 
   void _showAddStockPopup() {
     String selectedDepot = 'Padrão';
@@ -78,12 +120,14 @@ class _StockScreenState extends State<StockScreen> {
             onPressed: () {
               setState(() {
                 stockMovements.add({
+                  'code': (stockMovements.length + 1).toString().padLeft(3, '0'),
                   'depot': selectedDepot,
                   'product': productController.text,
                   'quantity': int.tryParse(quantityController.text) ?? 0,
                   'type': selectedMovementType,
                   'observation': observationController.text,
                 });
+                filteredStockMovements = List.from(stockMovements);
               });
               Navigator.pop(context);
             },
@@ -94,11 +138,60 @@ class _StockScreenState extends State<StockScreen> {
     );
   }
 
-  Widget _buildStockMovementItem(Map<String, dynamic> movement) {
+  void _showEditDepotPopup(int index) {
+    String selectedDepot = filteredStockMovements[index]['depot'];
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Alterar Local de Estoque"),
+        content: DropdownButtonFormField<String>(
+          value: selectedDepot,
+          items: ['Padrão', 'Depósito 1', 'Depósito 2']
+              .map((depot) => DropdownMenuItem(
+                    value: depot,
+                    child: Text(depot),
+                  ))
+              .toList(),
+          onChanged: (value) {
+            setState(() {
+              selectedDepot = value!;
+            });
+          },
+          decoration: InputDecoration(labelText: "Depósito"),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancelar"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                filteredStockMovements[index]['depot'] = selectedDepot;
+                int originalIndex = stockMovements.indexWhere((movement) =>
+                    movement['code'] == filteredStockMovements[index]['code']);
+                if (originalIndex != -1) {
+                  stockMovements[originalIndex]['depot'] = selectedDepot;
+                }
+              });
+              Navigator.pop(context);
+            },
+            child: Text("Salvar"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStockMovementItem(Map<String, dynamic> movement, int index) {
     return ListTile(
       title: Text("${movement['product']} - ${movement['quantity']}"),
       subtitle: Text(
-          "Depósito: ${movement['depot']}, Tipo: ${movement['type']}, Observação: ${movement['observation']}"),
+          "Código: ${movement['code']}, Depósito: ${movement['depot']}, Tipo: ${movement['type']}"),
+      trailing: IconButton(
+        icon: Icon(Icons.edit_location),
+        onPressed: () => _showEditDepotPopup(index),
+      ),
     );
   }
 
@@ -117,21 +210,13 @@ class _StockScreenState extends State<StockScreen> {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: codeController,
+                    controller: searchController,
                     decoration: InputDecoration(
-                      hintText: "Código",
+                      hintText: "Pesquisar por Código ou Nome",
                       border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.search),
                     ),
-                  ),
-                ),
-                SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    controller: stockController,
-                    decoration: InputDecoration(
-                      hintText: "Estoque",
-                      border: OutlineInputBorder(),
-                    ),
+                    onChanged: _filterStockMovements,
                   ),
                 ),
                 SizedBox(width: 10),
@@ -144,9 +229,9 @@ class _StockScreenState extends State<StockScreen> {
             SizedBox(height: 20),
             Expanded(
               child: ListView.builder(
-                itemCount: stockMovements.length,
+                itemCount: filteredStockMovements.length,
                 itemBuilder: (context, index) =>
-                    _buildStockMovementItem(stockMovements[index]),
+                    _buildStockMovementItem(filteredStockMovements[index], index),
               ),
             ),
           ],
