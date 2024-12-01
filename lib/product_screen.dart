@@ -7,243 +7,206 @@ class ProductScreen extends StatefulWidget {
 }
 
 class _ProductScreenState extends State<ProductScreen> {
+  final supabase = Supabase.instance.client;
+
   final TextEditingController searchController = TextEditingController();
-  final TextEditingController groupNameController = TextEditingController();
   final TextEditingController productNameController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
   final TextEditingController locationController = TextEditingController();
 
   String? selectedUnit;
-  String? selectedGroup;
-
   final List<String> units = ['Unidade', 'Kg', 'Litros'];
-  final List<String> groups = ['Grupo A', 'Grupo B'];
 
-  final List<Map<String, dynamic>> productList = [
-    {'name': 'Produto A', 'quantity': 10, 'unit': 'kg', 'location': 'Estoque 1'},
-    {'name': 'Produto B', 'quantity': 5, 'unit': 'litros', 'location': 'Estoque 2'},
-    {'name': 'Produto C', 'quantity': 8, 'unit': 'unidades', 'location': 'Estoque 3'},
-  ];
-
-  late List<Map<String, dynamic>> filteredProducts;
+  List<Map<String, dynamic>> products = [];
+  List<Map<String, dynamic>> filteredProducts = [];
 
   @override
   void initState() {
     super.initState();
-    initializeSupabase();
-    filteredProducts = productList;
+    fetchProducts();
     selectedUnit = units.first;
-    selectedGroup = groups.isNotEmpty ? groups.first : null;
   }
 
-  Future<void> initializeSupabase() async {
-    await Supabase.initialize(
-      url: 'SUA_URL_DO_SUPABASE', // Substitua pela URL do seu projeto
-      anonKey: 'SUA_CHAVE_ANONIMA', // Substitua pela sua chave anônima
-    );
+  Future<void> fetchProducts() async {
+    try {
+      final response = await supabase.from('produto').select();
+      if (response != null) {
+        setState(() {
+          products = response;
+          filteredProducts = products;
+        });
+      } else {
+        _showError('Erro ao buscar produtos');
+      }
+    } catch (e) {
+      _showError(e.toString());
+    }
+  }
+
+  Future<void> addProduct(String name, int quantity, String unit, String location) async {
+    try {
+      final response = await supabase.from('produto').insert({
+        'name': name,
+        'quantity': quantity,
+        'unit': unit,
+        'location': location,
+      });
+
+      if (response != null) {
+        fetchProducts();
+      } else {
+        _showError('Erro ao adicionar o produto');
+      }
+    } catch (e) {
+      _showError(e.toString());
+    }
+  }
+
+  Future<void> updateProduct(int id, int quantity, String location) async {
+    try {
+      final response = await supabase.from('produto').update({
+        'quantity': quantity,
+        'location': location,
+      }).eq('id', id);
+
+      if (response != null) {
+        fetchProducts();
+      } else {
+        _showError('Erro ao atualizar o produto');
+      }
+    } catch (e) {
+      _showError(e.toString());
+    }
+  }
+
+  Future<void> deleteProduct(int id) async {
+    try {
+      final response = await supabase.from('produto').delete().eq('id', id);
+
+      if (response != null) {
+        fetchProducts();
+      } else {
+        _showError('Erro ao deletar o produto');
+      }
+    } catch (e) {
+      _showError(e.toString());
+    }
   }
 
   void _filterProducts(String query) {
     setState(() {
-      if (query.isEmpty) {
-        filteredProducts = productList;
-      } else {
-        filteredProducts = productList
-            .where((product) =>
-                product['name'].toLowerCase().contains(query.toLowerCase()))
-            .toList();
-      }
+      filteredProducts = query.isEmpty
+          ? products
+          : products
+              .where((product) =>
+                  product['name'].toLowerCase().contains(query.toLowerCase()))
+              .toList();
     });
   }
 
-  void _showGroupDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Criar Grupo"),
-        content: TextField(
-          controller: groupNameController,
-          decoration: InputDecoration(
-            hintText: "Nome do grupo",
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text("Cancelar"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                groups.add(groupNameController.text);
-              });
-              groupNameController.clear();
-              Navigator.pop(context);
-            },
-            child: Text("Confirmar"),
-          ),
-        ],
-      ),
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Erro: $message")),
     );
   }
 
   void _showProductDialog() {
+    productNameController.clear();
+    quantityController.clear();
+    locationController.clear();
+    selectedUnit = units.first;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Novo Item de Estoque"),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: productNameController,
-                decoration: InputDecoration(
-                  hintText: "Nome do item",
-                ),
-              ),
-              SizedBox(height: 10),
-              TextField(
-                controller: quantityController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: "Quantidade",
-                ),
-              ),
-              SizedBox(height: 10),
-              TextField(
-                controller: locationController,
-                decoration: InputDecoration(
-                  hintText: "Local de armazenamento",
-                ),
-              ),
-              SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: selectedUnit,
-                items: units
-                    .map((unit) => DropdownMenuItem(
-                          value: unit,
-                          child: Text(unit),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    selectedUnit = value!;
-                  });
-                },
-                decoration: InputDecoration(
-                  labelText: "Unidade de medida",
-                ),
-              ),
-              SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: selectedGroup,
-                items: groups
-                    .map((group) => DropdownMenuItem(
-                          value: group,
-                          child: Text(group),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    selectedGroup = value!;
-                  });
-                },
-                decoration: InputDecoration(
-                  labelText: "Grupo",
-                ),
-              ),
-            ],
-          ),
+        title: Text("Novo Produto"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: productNameController,
+              decoration: InputDecoration(hintText: "Nome do Produto"),
+            ),
+            TextField(
+              controller: quantityController,
+              decoration: InputDecoration(hintText: "Quantidade"),
+              keyboardType: TextInputType.number,
+            ),
+            TextField(
+              controller: locationController,
+              decoration: InputDecoration(hintText: "Local de Armazenamento"),
+            ),
+            DropdownButtonFormField<String>(
+              value: selectedUnit,
+              items: units
+                  .map((unit) =>
+                      DropdownMenuItem(value: unit, child: Text(unit)))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedUnit = value!;
+                });
+              },
+              decoration: InputDecoration(labelText: "Unidade de Medida"),
+            ),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
             child: Text("Cancelar"),
           ),
           ElevatedButton(
             onPressed: () {
-              setState(() {
-                productList.add({
-                  'name': productNameController.text,
-                  'quantity': int.tryParse(quantityController.text) ?? 1,
-                  'unit': selectedUnit,
-                  'location': locationController.text,
-                });
-                filteredProducts = List.from(productList);
-              });
-
-              // Limpar os campos
-              productNameController.clear();
-              quantityController.clear();
-              locationController.clear();
-              selectedUnit = units.first;
-              selectedGroup = groups.isNotEmpty ? groups.first : null;
-
+              addProduct(
+                productNameController.text,
+                int.tryParse(quantityController.text) ?? 1,
+                selectedUnit!,
+                locationController.text,
+              );
               Navigator.pop(context);
             },
-            child: Text("Confirmar"),
+            child: Text("Salvar"),
           ),
         ],
       ),
     );
   }
 
-  void _showEditProductDialog(int index) {
-    // Preencher os campos com os valores do item a ser editado
-    productNameController.text = filteredProducts[index]['name'];
-    quantityController.text = filteredProducts[index]['quantity'].toString();
-    locationController.text = filteredProducts[index]['location'];
-    selectedUnit = filteredProducts[index]['unit'];
+  void _showEditProductDialog(Map<String, dynamic> product) {
+    quantityController.text = product['quantity'].toString();
+    locationController.text = product['location'];
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Editar Item de Estoque"),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: quantityController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: "Quantidade",
-                ),
-              ),
-              SizedBox(height: 10),
-              TextField(
-                controller: locationController,
-                decoration: InputDecoration(
-                  hintText: "Local de armazenamento",
-                ),
-              ),
-            ],
-          ),
+        title: Text("Editar Produto"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: quantityController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(hintText: "Quantidade"),
+            ),
+            TextField(
+              controller: locationController,
+              decoration: InputDecoration(hintText: "Local de Armazenamento"),
+            ),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
             child: Text("Cancelar"),
           ),
           ElevatedButton(
             onPressed: () {
-              setState(() {
-                filteredProducts[index]['quantity'] =
-                    int.tryParse(quantityController.text) ?? 1;
-                filteredProducts[index]['location'] = locationController.text;
-              });
-
-              // Limpar os campos
-              quantityController.clear();
-              locationController.clear();
-
+              updateProduct(
+                product['id'],
+                int.tryParse(quantityController.text) ?? product['quantity'],
+                locationController.text,
+              );
               Navigator.pop(context);
             },
             child: Text("Salvar"),
@@ -256,116 +219,38 @@ class _ProductScreenState extends State<ProductScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[300],
-      appBar: AppBar(
-        backgroundColor: Colors.blue[200],
-        title: Text("Produtos"),
-        elevation: 0,
-      ),
-      body: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Botões "Grupo" e "Novo Produto"
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _showGroupDialog,
-                  icon: Icon(Icons.bookmark),
-                  label: Text("Grupo"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 10),
-                ElevatedButton.icon(
-                  onPressed: _showProductDialog,
-                  icon: Icon(Icons.add),
-                  label: Text("Novo Produto"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 20),
-
-            // Barra de Pesquisa
-            TextField(
-              controller: searchController,
-              decoration: InputDecoration(
-                hintText: "Pesquisar produtos",
-                filled: true,
-                fillColor: Colors.white,
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              onChanged: _filterProducts,
-            ),
-            SizedBox(height: 20),
-
-            // Lista de produtos com o filtro aplicado
-            Expanded(
-              child: ListView.builder(
-                itemCount: filteredProducts.length,
-                itemBuilder: (context, index) {
-                  return GestureDetector(
-                    onTap: () => _showEditProductDialog(index),
-                    child: _buildProductItem(
-                      filteredProducts[index]['name'],
-                      filteredProducts[index]['quantity'],
-                      filteredProducts[index]['unit'],
-                      filteredProducts[index]['location'],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProductItem(String name, int quantity, String unit, String location) {
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 5),
-      padding: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      appBar: AppBar(title: Text("Produtos")),
+      body: Column(
         children: [
-          Text(
-            "$name - $quantity $unit",
-            style: TextStyle(fontSize: 16, color: Colors.grey[800]),
+          TextField(
+            controller: searchController,
+            decoration: InputDecoration(
+              hintText: "Pesquisar...",
+              prefixIcon: Icon(Icons.search),
+            ),
+            onChanged: _filterProducts,
           ),
-          Text(
-            "Local: $location",
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ElevatedButton(
+            onPressed: _showProductDialog,
+            child: Text("Novo Produto"),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: filteredProducts.length,
+              itemBuilder: (context, index) {
+                final product = filteredProducts[index];
+                return ListTile(
+                  title: Text("${product['name']}"),
+                  subtitle: Text(
+                      "${product['quantity']} ${product['unit']} - ${product['location']}"),
+                  onTap: () => _showEditProductDialog(product),
+                  trailing: IconButton(
+                    icon: Icon(Icons.delete),
+                    onPressed: () => deleteProduct(product['id']),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
