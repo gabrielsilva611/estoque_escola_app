@@ -12,10 +12,12 @@ class _ProductScreenState extends State<ProductScreen> {
   final TextEditingController searchController = TextEditingController();
   final TextEditingController productNameController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
-  final TextEditingController locationController = TextEditingController();
 
   String? selectedUnit;
   final List<String> units = ['Unidade', 'Kg', 'Litros'];
+
+  String? selectedStock;
+  final List<String> stocks = ['Estoque escolar', 'Estoque comida, limpeza'];
 
   List<Map<String, dynamic>> products = [];
   List<Map<String, dynamic>> filteredProducts = [];
@@ -25,31 +27,28 @@ class _ProductScreenState extends State<ProductScreen> {
     super.initState();
     fetchProducts();
     selectedUnit = units.first;
+    selectedStock = stocks.first;
   }
 
   Future<void> fetchProducts() async {
     try {
       final response = await supabase.from('produto').select();
-      if (response != null) {
-        setState(() {
-          products = response;
-          filteredProducts = products;
-        });
-      } else {
-        _showError('Erro ao buscar produtos');
-      }
+      setState(() {
+        products = response;
+        filteredProducts = products;
+      });
     } catch (e) {
       _showError(e.toString());
     }
   }
 
-  Future<void> addProduct(String name, int quantity, String unit, String location) async {
+  Future<void> addProduct(String name, int quantity, String unit, String stock) async {
     try {
       final response = await supabase.from('produto').insert({
         'name': name,
         'quantity': quantity,
         'unit': unit,
-        'location': location,
+        'location': stock,
       });
 
       if (response != null) {
@@ -62,11 +61,11 @@ class _ProductScreenState extends State<ProductScreen> {
     }
   }
 
-  Future<void> updateProduct(int id, int quantity, String location) async {
+  Future<void> updateProduct(int id, int quantity, String stock) async {
     try {
       final response = await supabase.from('produto').update({
         'quantity': quantity,
-        'location': location,
+        'location': stock,
       }).eq('id', id);
 
       if (response != null) {
@@ -113,8 +112,8 @@ class _ProductScreenState extends State<ProductScreen> {
   void _showProductDialog() {
     productNameController.clear();
     quantityController.clear();
-    locationController.clear();
     selectedUnit = units.first;
+    selectedStock = stocks.first;
 
     showDialog(
       context: context,
@@ -132,9 +131,18 @@ class _ProductScreenState extends State<ProductScreen> {
               decoration: InputDecoration(hintText: "Quantidade"),
               keyboardType: TextInputType.number,
             ),
-            TextField(
-              controller: locationController,
-              decoration: InputDecoration(hintText: "Local de Armazenamento"),
+            DropdownButtonFormField<String>(
+              value: selectedStock,
+              items: stocks
+                  .map((stock) =>
+                      DropdownMenuItem(value: stock, child: Text(stock)))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedStock = value!;
+                });
+              },
+              decoration: InputDecoration(labelText: "Estoque"),
             ),
             DropdownButtonFormField<String>(
               value: selectedUnit,
@@ -162,7 +170,7 @@ class _ProductScreenState extends State<ProductScreen> {
                 productNameController.text,
                 int.tryParse(quantityController.text) ?? 1,
                 selectedUnit!,
-                locationController.text,
+                selectedStock!,
               );
               Navigator.pop(context);
             },
@@ -175,7 +183,7 @@ class _ProductScreenState extends State<ProductScreen> {
 
   void _showEditProductDialog(Map<String, dynamic> product) {
     quantityController.text = product['quantity'].toString();
-    locationController.text = product['location'];
+    selectedStock = product['location'];
 
     showDialog(
       context: context,
@@ -189,9 +197,18 @@ class _ProductScreenState extends State<ProductScreen> {
               keyboardType: TextInputType.number,
               decoration: InputDecoration(hintText: "Quantidade"),
             ),
-            TextField(
-              controller: locationController,
-              decoration: InputDecoration(hintText: "Local de Armazenamento"),
+            DropdownButtonFormField<String>(
+              value: selectedStock,
+              items: stocks
+                  .map((stock) =>
+                      DropdownMenuItem(value: stock, child: Text(stock)))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedStock = value!;
+                });
+              },
+              decoration: InputDecoration(labelText: "Estoque"),
             ),
           ],
         ),
@@ -205,7 +222,7 @@ class _ProductScreenState extends State<ProductScreen> {
               updateProduct(
                 product['id'],
                 int.tryParse(quantityController.text) ?? product['quantity'],
-                locationController.text,
+                selectedStock!,
               );
               Navigator.pop(context);
             },
