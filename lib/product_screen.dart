@@ -38,7 +38,7 @@ class _ProductScreenState extends State<ProductScreen> {
         filteredProducts = products;
       });
     } catch (e) {
-      _showError(e.toString());
+      // Log error or handle it silently
     }
   }
 
@@ -53,11 +53,9 @@ class _ProductScreenState extends State<ProductScreen> {
 
       if (response != null) {
         fetchProducts();
-      } else {
-        _showError('Erro ao adicionar o produto');
       }
     } catch (e) {
-      _showError(e.toString());
+      // Log error or handle it silently
     }
   }
 
@@ -70,11 +68,9 @@ class _ProductScreenState extends State<ProductScreen> {
 
       if (response != null) {
         fetchProducts();
-      } else {
-        _showError('Erro ao atualizar o produto');
       }
     } catch (e) {
-      _showError(e.toString());
+      // Log error or handle it silently
     }
   }
 
@@ -84,11 +80,9 @@ class _ProductScreenState extends State<ProductScreen> {
 
       if (response != null) {
         fetchProducts();
-      } else {
-        _showError('Erro ao deletar o produto');
       }
     } catch (e) {
-      _showError(e.toString());
+      // Log error or handle it silently
     }
   }
 
@@ -101,12 +95,6 @@ class _ProductScreenState extends State<ProductScreen> {
                   product['name'].toLowerCase().contains(query.toLowerCase()))
               .toList();
     });
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Erro: $message")),
-    );
   }
 
   void _showProductDialog() {
