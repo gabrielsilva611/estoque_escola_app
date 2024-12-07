@@ -1,0 +1,34 @@
+Controle de Estoaue 
+
+* PAC - Projeto de Aprendizagem Colaborativa Extensionista do Curso de Engenharia de Software da Católica de Santa Catarina;
+
+
+Nosso app foi produzido para o colégio conseguir controlar a saída e entrada de produtos do colégio, vimos que era uma necessidade e decidimos fazer o programa com essa ideia , o beneficiada pelo nosso programa foi a Escola Municipal Prefeito Wittch Freitag
+
+O app controla o estoque do colégio assim facilitando eles verem o que chega e o que sai, com o app contendo datas , horários das saídas e entradas.
+
+os requisitos que precisamos pra montar o nosso aplicativo foi o android studio , visual code , supabase 
+
+Tela de login 
+
+Primeiramente temos a tela de login onde o usuário acessará o app.
+
+
+
+Tela de Produto
+
+Depois temos a tela de produto que conseguem adicionar o produto que precisar , quantidade e etc.
+
+Tela de estoque 
+
+temos a tela de estoque que o usuário consegue ver oq foi adicionado e separar por estoque escolar ou comida e limpeza .
+
+
+Vídeo 
+
+
+Jira 
+
+https://github.com/Vytor-Oliveira/estoque_escola_app
+
+Autores : Gabriel da silva , Vytor de Oliveira , Erik Kestring , Bryan locatelli, Magno, Bruno saito
